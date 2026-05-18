@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthPort, AuthRepository>();
 
         services.AddScoped<GetProductsUseCase>();
+        services.AddScoped<CreateProductUseCase>();
         services.AddScoped<RegisterSaleUseCase>();
         services.AddScoped<GetDailySummaryUseCase>();
         services.AddScoped<AuthenticateUserUseCase>();

@@ -1,0 +1,6 @@
+@restobar_core_HostAddress = http://localhost:5041
+
+GET {{restobar_core_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

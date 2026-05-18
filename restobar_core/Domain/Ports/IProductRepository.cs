@@ -6,4 +6,5 @@ public interface IProductRepository
 {
     Task<List<Product>> GetAllAsync();
     Task<List<Product>> GetActiveAsync();
+    Task<Product> SaveAsync(Product product);
 }

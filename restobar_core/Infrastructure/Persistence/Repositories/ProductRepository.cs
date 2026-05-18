@@ -23,4 +23,11 @@ public class ProductRepository(AppDbContext db) : IProductRepository
             .ThenBy(p => p.Name)
             .ToListAsync();
     }
+
+    public async Task<Product> SaveAsync(Product product)
+    {
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+        return product;
+    }
 }
