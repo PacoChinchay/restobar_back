@@ -44,4 +44,13 @@ public class ProductRepository(AppDbContext db) : IProductRepository
         await db.SaveChangesAsync();
         return product;
     }
+
+    public async Task DeleteAsync(int id)
+    {
+        var product = await db.Products.FindAsync(id)
+            ?? throw new KeyNotFoundException($"Producto {id} no encontrado.");
+
+        product.Active = false;
+        await db.SaveChangesAsync();
+    }
 }

@@ -9,4 +9,5 @@ public interface IProductRepository
     Task<List<Product>> GetActiveAsync();
     Task<Product> SaveAsync(Product product);
     Task<Product> UpdateAsync(int id, string name, decimal price, ProductCategory category);
+    Task DeleteAsync(int id);
 }

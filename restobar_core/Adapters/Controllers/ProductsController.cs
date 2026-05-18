@@ -10,7 +10,8 @@ namespace restobar_core.Adapters.Controllers;
 public class ProductsController(
     GetProductsUseCase getProductsUseCase,
     CreateProductUseCase createProductUseCase,
-    UpdateProductUseCase updateProductUseCase) : ControllerBase
+    UpdateProductUseCase updateProductUseCase,
+    DeleteProductUseCase deleteProductUseCase) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<ProductDto>>> GetActive()
@@ -36,5 +37,12 @@ public class ProductsController(
     {
         var result = await updateProductUseCase.ExecuteAsync(id, request);
         return Ok(result);
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        await deleteProductUseCase.ExecuteAsync(id);
+        return NoContent();
     }
 }
