@@ -9,7 +9,8 @@ namespace restobar_core.Adapters.Controllers;
 [Route("api/[controller]")]
 public class ProductsController(
     GetProductsUseCase getProductsUseCase,
-    CreateProductUseCase createProductUseCase) : ControllerBase
+    CreateProductUseCase createProductUseCase,
+    UpdateProductUseCase updateProductUseCase) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<ProductDto>>> GetActive()
@@ -28,5 +29,12 @@ public class ProductsController(
     {
         var result = await createProductUseCase.ExecuteAsync(request);
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<ProductDto>> Update(int id, [FromBody] UpdateProductRequest request)
+    {
+        var result = await updateProductUseCase.ExecuteAsync(id, request);
+        return Ok(result);
     }
 }
