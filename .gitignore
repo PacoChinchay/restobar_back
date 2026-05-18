@@ -1,0 +1,30 @@
+## Build outputs
+bin/
+obj/
+
+## Rider
+.idea/
+
+## VS Code
+.vscode/
+
+## Visual Studio
+*.user
+*.suo
+.vs/
+
+## NuGet
+*.nupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Secrets — never commit real credentials
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+## OS
+.DS_Store
+Thumbs.db
