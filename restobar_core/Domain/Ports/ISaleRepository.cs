@@ -8,4 +8,5 @@ public interface ISaleRepository
     Task<Sale> SaveAsync(Sale sale);
     Task<List<Sale>> GetByDateAsync(DateOnly date);
     Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date);
+    Task<List<DailyTotalDto>> GetWeeklyTotalsAsync(DateOnly endDate);
 }

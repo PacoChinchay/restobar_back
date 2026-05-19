@@ -26,4 +26,9 @@ public class GetDailySummaryUseCase(ISaleRepository repository)
     {
         return await repository.GetDailySummaryAsync(date);
     }
+
+    public async Task<List<DailyTotalDto>> GetWeeklyTotalsAsync(DateOnly endDate)
+    {
+        return await repository.GetWeeklyTotalsAsync(endDate);
+    }
 }

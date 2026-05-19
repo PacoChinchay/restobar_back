@@ -34,4 +34,12 @@ public class SalesController(
             TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, LimaZone));
         return Ok(await getDailySummaryUseCase.ExecuteAsync(targetDate));
     }
+
+    [HttpGet("weekly")]
+    public async Task<ActionResult<List<DailyTotalDto>>> GetWeekly([FromQuery] DateOnly? endDate)
+    {
+        var targetDate = endDate ?? DateOnly.FromDateTime(
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, LimaZone));
+        return Ok(await getDailySummaryUseCase.GetWeeklyTotalsAsync(targetDate));
+    }
 }

@@ -75,4 +75,30 @@ public class SaleRepository(AppDbContext db) : ISaleRepository
             RecentSales = recentSales
         };
     }
+
+    public async Task<List<DailyTotalDto>> GetWeeklyTotalsAsync(DateOnly endDate)
+    {
+        var startDate = endDate.AddDays(-6);
+
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(startDate.ToDateTime(TimeOnly.MinValue), LimaZone);
+        var endUtc   = TimeZoneInfo.ConvertTimeToUtc(endDate.AddDays(1).ToDateTime(TimeOnly.MinValue), LimaZone);
+
+        var rawSales = await db.Sales
+            .Where(s => s.RegisteredAt >= startUtc && s.RegisteredAt < endUtc)
+            .Select(s => new { s.RegisteredAt, s.Total })
+            .ToListAsync();
+
+        var grouped = rawSales
+            .GroupBy(s => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(s.RegisteredAt, LimaZone)))
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Total));
+
+        return Enumerable.Range(0, 7)
+            .Select(i => startDate.AddDays(i))
+            .Select(day => new DailyTotalDto
+            {
+                Date  = day.ToString("yyyy-MM-dd"),
+                Total = grouped.GetValueOrDefault(day, 0m)
+            })
+            .ToList();
+    }
 }
