@@ -45,7 +45,7 @@ public static class DbSeeder
                     Id = "admin",
                     Name = "Administrador",
                     Initials = "AD",
-                    Role = UserRole.admin,
+                    Role = UserRole.administrador,
                     PinHash = BCrypt.Net.BCrypt.HashPassword("1234", workFactor: 11)
                 },
                 new()
