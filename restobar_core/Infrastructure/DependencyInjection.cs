@@ -12,6 +12,7 @@ public static class DependencyInjection
         services.AddScoped<ISaleRepository, SaleRepository>();
         services.AddScoped<IAuthPort, AuthRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
 
         services.AddScoped<GetProductsUseCase>();
         services.AddScoped<CreateProductUseCase>();
@@ -24,6 +25,14 @@ public static class DependencyInjection
         services.AddScoped<CreateCategoryUseCase>();
         services.AddScoped<UpdateCategoryUseCase>();
         services.AddScoped<DeleteCategoryUseCase>();
+        services.AddScoped<GetOpenOrdersUseCase>();
+        services.AddScoped<GetOrderUseCase>();
+        services.AddScoped<CreateOrderUseCase>();
+        services.AddScoped<AddOrderItemUseCase>();
+        services.AddScoped<RemoveOrderItemUseCase>();
+        services.AddScoped<UpdateOrderItemUseCase>();
+        services.AddScoped<PayOrderUseCase>();
+        services.AddScoped<CancelOrderUseCase>();
 
         return services;
     }
