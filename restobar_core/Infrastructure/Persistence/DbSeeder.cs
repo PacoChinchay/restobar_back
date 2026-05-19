@@ -7,23 +7,34 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
-        if (db.Products.Any()) return;
-
-        var products = new List<Product>
+        if (!db.Categories.Any())
         {
-            new() { Name = "Lomo Saltado",     Price = 18m, Category = ProductCategory.Platos,  Active = true },
-            new() { Name = "Ceviche",          Price = 22m, Category = ProductCategory.Platos,  Active = true },
-            new() { Name = "Arroz con Pollo",  Price = 15m, Category = ProductCategory.Platos,  Active = true },
-            new() { Name = "Ají de Gallina",   Price = 16m, Category = ProductCategory.Platos,  Active = true },
-            new() { Name = "Chicharrón",       Price = 20m, Category = ProductCategory.Platos,  Active = true },
-            new() { Name = "Aguadito",         Price = 14m, Category = ProductCategory.Platos,  Active = true },
-            new() { Name = "Gaseosa",          Price = 5m,  Category = ProductCategory.Bebidas, Active = true },
-            new() { Name = "Cerveza",          Price = 8m,  Category = ProductCategory.Bebidas, Active = true },
-            new() { Name = "Agua",             Price = 3m,  Category = ProductCategory.Bebidas, Active = true },
-            new() { Name = "Arroz con Leche",  Price = 7m,  Category = ProductCategory.Postres, Active = true },
-        };
+            db.Categories.AddRange(
+                new Category { Name = "Platos" },
+                new Category { Name = "Bebidas" },
+                new Category { Name = "Postres" }
+            );
+            await db.SaveChangesAsync();
+        }
 
-        db.Products.AddRange(products);
+        if (!db.Products.Any())
+        {
+            var products = new List<Product>
+            {
+                new() { Name = "Lomo Saltado",    Price = 18m, Category = "Platos",  Active = true },
+                new() { Name = "Ceviche",         Price = 22m, Category = "Platos",  Active = true },
+                new() { Name = "Arroz con Pollo", Price = 15m, Category = "Platos",  Active = true },
+                new() { Name = "Ají de Gallina",  Price = 16m, Category = "Platos",  Active = true },
+                new() { Name = "Chicharrón",      Price = 20m, Category = "Platos",  Active = true },
+                new() { Name = "Aguadito",        Price = 14m, Category = "Platos",  Active = true },
+                new() { Name = "Gaseosa",         Price = 5m,  Category = "Bebidas", Active = true },
+                new() { Name = "Cerveza",         Price = 8m,  Category = "Bebidas", Active = true },
+                new() { Name = "Agua",            Price = 3m,  Category = "Bebidas", Active = true },
+                new() { Name = "Arroz con Leche", Price = 7m,  Category = "Postres", Active = true },
+            };
+
+            db.Products.AddRange(products);
+        }
 
         if (!db.Users.Any())
         {

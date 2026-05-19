@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using restobar_core.Domain.Entities;
-using restobar_core.Domain.Enums;
 using restobar_core.Domain.Ports;
 using restobar_core.Infrastructure.Persistence;
 
@@ -32,7 +31,7 @@ public class ProductRepository(AppDbContext db) : IProductRepository
         return product;
     }
 
-    public async Task<Product> UpdateAsync(int id, string name, decimal price, ProductCategory category)
+    public async Task<Product> UpdateAsync(int id, string name, decimal price, string category)
     {
         var product = await db.Products.FindAsync(id)
             ?? throw new KeyNotFoundException($"Producto {id} no encontrado.");

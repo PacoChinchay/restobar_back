@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using restobar_core.Domain.Entities;
-using restobar_core.Domain.Enums;
 
 namespace restobar_core.Infrastructure.Persistence.Configurations;
 
@@ -23,7 +22,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.Category)
             .IsRequired()
-            .HasConversion<string>();
+            .HasMaxLength(50);
 
         builder.Property(p => p.Active)
             .IsRequired()
