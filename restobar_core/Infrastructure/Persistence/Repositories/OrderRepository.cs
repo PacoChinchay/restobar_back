@@ -47,6 +47,24 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
         return order is null ? null : ToDto(order);
     }
 
+    private async Task DecrementMenuStock(int productId, int quantity)
+    {
+        var menuItem = await db.MenuItems
+            .Include(mi => mi.Menu)
+            .FirstOrDefaultAsync(mi => mi.Menu.IsActive && mi.ProductId == productId);
+        if (menuItem is not null)
+            menuItem.RemainingQuantity = Math.Max(0, menuItem.RemainingQuantity - quantity);
+    }
+
+    private async Task RestoreMenuStock(int productId, int quantity)
+    {
+        var menuItem = await db.MenuItems
+            .Include(mi => mi.Menu)
+            .FirstOrDefaultAsync(mi => mi.Menu.IsActive && mi.ProductId == productId);
+        if (menuItem is not null)
+            menuItem.RemainingQuantity = Math.Min(menuItem.InitialQuantity, menuItem.RemainingQuantity + quantity);
+    }
+
     public async Task<OrderDto> CreateAsync(int tableNumber, List<OrderItemInput> items)
     {
         var order = new Order
@@ -64,6 +82,8 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
             }).ToList(),
         };
         db.Orders.Add(order);
+        foreach (var item in items)
+            await DecrementMenuStock(item.ProductId, item.Quantity);
         await db.SaveChangesAsync();
         return ToDto(order);
     }
@@ -88,6 +108,7 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
                 Subtotal = item.UnitPrice * item.Quantity,
             });
         }
+        await DecrementMenuStock(item.ProductId, item.Quantity);
         await db.SaveChangesAsync();
         return ToDto(order);
     }
@@ -95,6 +116,7 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
     public async Task RemoveItemAsync(int orderId, int itemId)
     {
         var item = await db.OrderItems.FirstAsync(i => i.Id == itemId && i.OrderId == orderId);
+        await RestoreMenuStock(item.ProductId, item.Quantity);
         db.OrderItems.Remove(item);
         await db.SaveChangesAsync();
     }
@@ -103,6 +125,11 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
     {
         var order = await db.Orders.Include(o => o.Items).FirstAsync(o => o.Id == orderId);
         var item = order.Items.First(i => i.Id == itemId);
+        var diff = quantity - item.Quantity;
+        if (diff > 0)
+            await DecrementMenuStock(item.ProductId, diff);
+        else if (diff < 0)
+            await RestoreMenuStock(item.ProductId, -diff);
         item.Quantity = quantity;
         item.Subtotal = item.UnitPrice * quantity;
         await db.SaveChangesAsync();
