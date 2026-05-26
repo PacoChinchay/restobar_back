@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using restobar_core.Application.DTOs;
 using restobar_core.Domain.Entities;
+using restobar_core.Domain.Enums;
 using restobar_core.Domain.Ports;
 using restobar_core.Infrastructure.Persistence;
 
@@ -12,6 +13,7 @@ public class MenuRepository(AppDbContext db) : IMenuRepository
     {
         Id = m.Id,
         Name = m.Name,
+        Type = m.Type,
         IsActive = m.IsActive,
         CreatedAt = m.CreatedAt,
         Items = m.Items.Select(i => new MenuItemDto
@@ -34,19 +36,20 @@ public class MenuRepository(AppDbContext db) : IMenuRepository
         return menus.Select(ToDto).ToList();
     }
 
-    public async Task<MenuDto?> GetActiveAsync()
+    public async Task<MenuDto?> GetActiveAsync(MenuType type = MenuType.daily)
     {
         var menu = await db.Menus
             .Include(m => m.Items)
-            .FirstOrDefaultAsync(m => m.IsActive);
+            .FirstOrDefaultAsync(m => m.IsActive && m.Type == type);
         return menu is null ? null : ToDto(menu);
     }
 
-    public async Task<MenuDto> CreateAsync(string name, List<MenuItemInput> items)
+    public async Task<MenuDto> CreateAsync(string name, MenuType type, List<MenuItemInput> items)
     {
         var menu = new Menu
         {
             Name = name,
+            Type = type,
             IsActive = false,
             CreatedAt = DateTime.UtcNow,
             Items = items.Select(i => new MenuItem
@@ -89,10 +92,10 @@ public class MenuRepository(AppDbContext db) : IMenuRepository
 
     public async Task<MenuDto> ActivateAsync(int id)
     {
-        await db.Menus
-            .Where(m => m.IsActive)
-            .ExecuteUpdateAsync(s => s.SetProperty(m => m.IsActive, false));
         var menu = await db.Menus.Include(m => m.Items).FirstAsync(m => m.Id == id);
+        await db.Menus
+            .Where(m => m.IsActive && m.Type == menu.Type)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.IsActive, false));
         menu.IsActive = true;
         await db.SaveChangesAsync();
         return ToDto(menu);

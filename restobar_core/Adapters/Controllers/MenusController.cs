@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using restobar_core.Application.DTOs;
 using restobar_core.Application.UseCases;
+using restobar_core.Domain.Enums;
 
 namespace restobar_core.Adapters.Controllers;
 
@@ -21,9 +22,9 @@ public class MenusController(
         Ok(await getMenus.ExecuteAsync());
 
     [HttpGet("active")]
-    public async Task<ActionResult<MenuDto>> GetActive()
+    public async Task<ActionResult<MenuDto>> GetActive([FromQuery] MenuType type = MenuType.daily)
     {
-        var result = await getActiveMenu.ExecuteAsync();
+        var result = await getActiveMenu.ExecuteAsync(type);
         return result is null ? NoContent() : Ok(result);
     }
 

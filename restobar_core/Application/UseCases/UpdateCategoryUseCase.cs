@@ -7,7 +7,7 @@ public class UpdateCategoryUseCase(ICategoryRepository repository)
 {
     public async Task<CategoryDto> ExecuteAsync(int id, UpdateCategoryRequest request)
     {
-        var category = await repository.UpdateAsync(id, request.Name.Trim());
-        return new CategoryDto { Id = category.Id, Name = category.Name };
+        var category = await repository.UpdateAsync(id, request.Name.Trim(), request.IsDrink);
+        return new CategoryDto { Id = category.Id, Name = category.Name, IsDrink = category.IsDrink };
     }
 }

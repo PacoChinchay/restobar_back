@@ -8,6 +8,6 @@ public class GetCategoriesUseCase(ICategoryRepository repository)
     public async Task<List<CategoryDto>> ExecuteAsync()
     {
         var categories = await repository.GetAllAsync();
-        return categories.Select(c => new CategoryDto { Id = c.Id, Name = c.Name }).ToList();
+        return categories.Select(c => new CategoryDto { Id = c.Id, Name = c.Name, IsDrink = c.IsDrink }).ToList();
     }
 }

@@ -12,20 +12,21 @@ public class CategoryRepository(AppDbContext db) : ICategoryRepository
         return await db.Categories.OrderBy(c => c.Name).ToListAsync();
     }
 
-    public async Task<Category> CreateAsync(string name)
+    public async Task<Category> CreateAsync(string name, bool isDrink)
     {
-        var category = new Category { Name = name };
+        var category = new Category { Name = name, IsDrink = isDrink };
         db.Categories.Add(category);
         await db.SaveChangesAsync();
         return category;
     }
 
-    public async Task<Category> UpdateAsync(int id, string name)
+    public async Task<Category> UpdateAsync(int id, string name, bool isDrink)
     {
         var category = await db.Categories.FindAsync(id)
             ?? throw new KeyNotFoundException($"Categoría {id} no encontrada.");
 
         category.Name = name;
+        category.IsDrink = isDrink;
         await db.SaveChangesAsync();
         return category;
     }

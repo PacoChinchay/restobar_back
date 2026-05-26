@@ -1,9 +1,12 @@
+using restobar_core.Domain.Enums;
+
 namespace restobar_core.Application.DTOs;
 
 public class MenuDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public MenuType Type { get; set; } = MenuType.daily;
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<MenuItemDto> Items { get; set; } = new();
@@ -30,6 +33,7 @@ public class MenuItemInput
 public class CreateMenuRequest
 {
     public string Name { get; set; } = string.Empty;
+    public MenuType Type { get; set; } = MenuType.daily;
     public List<MenuItemInput> Items { get; set; } = new();
 }
 

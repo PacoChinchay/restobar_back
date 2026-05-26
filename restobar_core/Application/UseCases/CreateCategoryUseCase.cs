@@ -7,7 +7,7 @@ public class CreateCategoryUseCase(ICategoryRepository repository)
 {
     public async Task<CategoryDto> ExecuteAsync(CreateCategoryRequest request)
     {
-        var category = await repository.CreateAsync(request.Name.Trim());
-        return new CategoryDto { Id = category.Id, Name = category.Name };
+        var category = await repository.CreateAsync(request.Name.Trim(), request.IsDrink);
+        return new CategoryDto { Id = category.Id, Name = category.Name, IsDrink = category.IsDrink };
     }
 }

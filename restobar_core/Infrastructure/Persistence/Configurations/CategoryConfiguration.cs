@@ -17,5 +17,9 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .HasMaxLength(50);
 
         builder.HasIndex(c => c.Name).IsUnique();
+
+        builder.Property(c => c.IsDrink)
+            .IsRequired()
+            .HasDefaultValue(false);
     }
 }
