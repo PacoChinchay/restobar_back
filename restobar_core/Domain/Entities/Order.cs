@@ -8,5 +8,6 @@ public class Order
     public DateTime CreatedAt { get; set; }
     public DateTime? PaidAt { get; set; }
     public string? PaymentMethod { get; set; }
+    public string? CreatedBy { get; set; }
     public List<OrderItem> Items { get; set; } = new();
 }

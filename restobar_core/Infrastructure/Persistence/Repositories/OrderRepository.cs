@@ -29,6 +29,7 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
         CreatedAt = new DateTimeOffset(o.CreatedAt, TimeSpan.Zero),
         PaidAt = o.PaidAt.HasValue ? new DateTimeOffset(o.PaidAt.Value, TimeSpan.Zero) : null,
         PaymentMethod = o.PaymentMethod,
+        CreatedBy = o.CreatedBy,
     };
 
     public async Task<List<OrderDto>> GetOpenAsync()
@@ -76,13 +77,14 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
             await hub.Clients.All.SendAsync("StockUpdated", valid);
     }
 
-    public async Task<OrderDto> CreateAsync(int tableNumber, List<OrderItemInput> items)
+    public async Task<OrderDto> CreateAsync(int tableNumber, List<OrderItemInput> items, string? createdBy)
     {
         var order = new Order
         {
             TableNumber = tableNumber,
             Status = "open",
             CreatedAt = DateTime.UtcNow,
+            CreatedBy = createdBy,
             Items = items.Select(i => new OrderItem
             {
                 ProductId = i.ProductId,

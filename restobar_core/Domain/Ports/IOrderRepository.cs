@@ -6,7 +6,7 @@ public interface IOrderRepository
 {
     Task<List<OrderDto>> GetOpenAsync();
     Task<OrderDto?> GetByIdAsync(int id);
-    Task<OrderDto> CreateAsync(int tableNumber, List<OrderItemInput> items);
+    Task<OrderDto> CreateAsync(int tableNumber, List<OrderItemInput> items, string? createdBy);
     Task<OrderDto> AddItemAsync(int orderId, OrderItemInput item);
     Task RemoveItemAsync(int orderId, int itemId);
     Task<OrderDto> UpdateItemQuantityAsync(int orderId, int itemId, int quantity);

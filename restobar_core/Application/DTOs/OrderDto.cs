@@ -10,4 +10,5 @@ public class OrderDto
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
     public string? PaymentMethod { get; set; }
+    public string? CreatedBy { get; set; }
 }
