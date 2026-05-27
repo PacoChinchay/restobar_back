@@ -1,3 +1,4 @@
+using restobar_core.Application.Services;
 using restobar_core.Application.UseCases;
 using restobar_core.Domain.Ports;
 using restobar_core.Infrastructure.Persistence.Repositories;
@@ -8,6 +9,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
+        services.AddSingleton<JwtService>();
+
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ISaleRepository, SaleRepository>();
         services.AddScoped<IAuthPort, AuthRepository>();

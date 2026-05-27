@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using restobar_core.Application.DTOs;
+using restobar_core.Application.Hubs;
 using restobar_core.Domain.Entities;
 using restobar_core.Domain.Enums;
 using restobar_core.Domain.Ports;
@@ -7,7 +9,7 @@ using restobar_core.Infrastructure.Persistence;
 
 namespace restobar_core.Infrastructure.Persistence.Repositories;
 
-public class OrderRepository(AppDbContext db) : IOrderRepository
+public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrderRepository
 {
     private static OrderDto ToDto(Order o) => new()
     {
@@ -47,22 +49,31 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
         return order is null ? null : ToDto(order);
     }
 
-    private async Task DecrementMenuStock(int productId, int quantity)
+    private async Task<StockUpdateDto?> DecrementMenuStock(int productId, int quantity)
     {
         var menuItem = await db.MenuItems
             .Include(mi => mi.Menu)
             .FirstOrDefaultAsync(mi => mi.Menu.IsActive && mi.ProductId == productId);
-        if (menuItem is not null)
-            menuItem.RemainingQuantity = Math.Max(0, menuItem.RemainingQuantity - quantity);
+        if (menuItem is null) return null;
+        menuItem.RemainingQuantity = Math.Max(0, menuItem.RemainingQuantity - quantity);
+        return new StockUpdateDto(productId, menuItem.RemainingQuantity);
     }
 
-    private async Task RestoreMenuStock(int productId, int quantity)
+    private async Task<StockUpdateDto?> RestoreMenuStock(int productId, int quantity)
     {
         var menuItem = await db.MenuItems
             .Include(mi => mi.Menu)
             .FirstOrDefaultAsync(mi => mi.Menu.IsActive && mi.ProductId == productId);
-        if (menuItem is not null)
-            menuItem.RemainingQuantity = Math.Min(menuItem.InitialQuantity, menuItem.RemainingQuantity + quantity);
+        if (menuItem is null) return null;
+        menuItem.RemainingQuantity = Math.Min(menuItem.InitialQuantity, menuItem.RemainingQuantity + quantity);
+        return new StockUpdateDto(productId, menuItem.RemainingQuantity);
+    }
+
+    private async Task BroadcastStock(IEnumerable<StockUpdateDto?> updates)
+    {
+        var valid = updates.Where(u => u is not null).Cast<StockUpdateDto>().ToList();
+        if (valid.Count > 0)
+            await hub.Clients.All.SendAsync("StockUpdated", valid);
     }
 
     public async Task<OrderDto> CreateAsync(int tableNumber, List<OrderItemInput> items)
@@ -82,9 +93,11 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
             }).ToList(),
         };
         db.Orders.Add(order);
+        var updates = new List<StockUpdateDto?>();
         foreach (var item in items)
-            await DecrementMenuStock(item.ProductId, item.Quantity);
+            updates.Add(await DecrementMenuStock(item.ProductId, item.Quantity));
         await db.SaveChangesAsync();
+        await BroadcastStock(updates);
         return ToDto(order);
     }
 
@@ -108,17 +121,19 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
                 Subtotal = item.UnitPrice * item.Quantity,
             });
         }
-        await DecrementMenuStock(item.ProductId, item.Quantity);
+        var update = await DecrementMenuStock(item.ProductId, item.Quantity);
         await db.SaveChangesAsync();
+        await BroadcastStock([update]);
         return ToDto(order);
     }
 
     public async Task RemoveItemAsync(int orderId, int itemId)
     {
         var item = await db.OrderItems.FirstAsync(i => i.Id == itemId && i.OrderId == orderId);
-        await RestoreMenuStock(item.ProductId, item.Quantity);
+        var update = await RestoreMenuStock(item.ProductId, item.Quantity);
         db.OrderItems.Remove(item);
         await db.SaveChangesAsync();
+        await BroadcastStock([update]);
     }
 
     public async Task<OrderDto> UpdateItemQuantityAsync(int orderId, int itemId, int quantity)
@@ -126,13 +141,15 @@ public class OrderRepository(AppDbContext db) : IOrderRepository
         var order = await db.Orders.Include(o => o.Items).FirstAsync(o => o.Id == orderId);
         var item = order.Items.First(i => i.Id == itemId);
         var diff = quantity - item.Quantity;
+        StockUpdateDto? update = null;
         if (diff > 0)
-            await DecrementMenuStock(item.ProductId, diff);
+            update = await DecrementMenuStock(item.ProductId, diff);
         else if (diff < 0)
-            await RestoreMenuStock(item.ProductId, -diff);
+            update = await RestoreMenuStock(item.ProductId, -diff);
         item.Quantity = quantity;
         item.Subtotal = item.UnitPrice * quantity;
         await db.SaveChangesAsync();
+        if (update is not null) await BroadcastStock([update]);
         return ToDto(order);
     }
 
