@@ -10,6 +10,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
         services.AddSingleton<JwtService>();
+        services.AddSingleton<KitchenPrinterService>();
 
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ISaleRepository, SaleRepository>();
@@ -48,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<ActivateMenuUseCase>();
         services.AddScoped<DeactivateMenuUseCase>();
         services.AddScoped<UpdateMenuItemQuantityUseCase>();
+        services.AddScoped<GetWaiterReportUseCase>();
 
         return services;
     }

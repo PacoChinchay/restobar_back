@@ -12,4 +12,5 @@ public interface IOrderRepository
     Task<OrderDto> UpdateItemQuantityAsync(int orderId, int itemId, int quantity);
     Task<OrderDto> PayAsync(int orderId, string paymentMethod, string registeredBy);
     Task CancelAsync(int orderId);
+    Task<WaiterWeekSummaryDto> GetWaiterWeekStatsAsync(DateOnly endDate);
 }

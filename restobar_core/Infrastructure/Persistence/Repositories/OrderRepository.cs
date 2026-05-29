@@ -11,6 +11,9 @@ namespace restobar_core.Infrastructure.Persistence.Repositories;
 
 public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrderRepository
 {
+    private static readonly TimeZoneInfo LimaZone =
+        TimeZoneInfo.FindSystemTimeZoneById("America/Lima");
+
     private static OrderDto ToDto(Order o) => new()
     {
         Id = o.Id,
@@ -189,5 +192,48 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
         var order = await db.Orders.FirstAsync(o => o.Id == orderId);
         order.Status = "cancelled";
         await db.SaveChangesAsync();
+    }
+
+    public async Task<WaiterWeekSummaryDto> GetWaiterWeekStatsAsync(DateOnly endDate)
+    {
+        var startDate = endDate.AddDays(-6);
+        var startUtc  = TimeZoneInfo.ConvertTimeToUtc(startDate.ToDateTime(TimeOnly.MinValue), LimaZone);
+        var endUtc    = TimeZoneInfo.ConvertTimeToUtc(endDate.ToDateTime(new TimeOnly(23, 59, 59)), LimaZone);
+
+        var orders = await db.Orders
+            .Include(o => o.Items)
+            .Where(o => o.CreatedAt >= startUtc && o.CreatedAt <= endUtc && o.CreatedBy != null)
+            .ToListAsync();
+
+        var dailyTotals = Enumerable.Range(0, 7)
+            .Select(i =>
+            {
+                var day  = startDate.AddDays(i);
+                var s    = TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(TimeOnly.MinValue), LimaZone);
+                var e    = TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(new TimeOnly(23, 59, 59)), LimaZone);
+                var cnt  = orders.Count(o => o.CreatedAt >= s && o.CreatedAt <= e);
+                return new DailyOrderCountDto(day.ToString("yyyy-MM-dd"), cnt);
+            })
+            .ToList();
+
+        var waiters = orders
+            .GroupBy(o => o.CreatedBy!)
+            .Select(g =>
+            {
+                var paid    = g.Where(o => o.Status == "paid").ToList();
+                var revenue = paid.Sum(o => o.Items.Sum(i => i.Subtotal));
+                var cnt     = g.Count();
+                return new WaiterStatsDto(
+                    g.Key,
+                    cnt,
+                    g.Select(o => o.TableNumber).Distinct().Count(),
+                    revenue,
+                    paid.Count > 0 ? revenue / paid.Count : 0
+                );
+            })
+            .OrderByDescending(w => w.TotalOrders)
+            .ToList();
+
+        return new WaiterWeekSummaryDto(waiters, dailyTotals);
     }
 }
