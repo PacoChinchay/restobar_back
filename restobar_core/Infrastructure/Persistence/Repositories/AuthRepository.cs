@@ -18,7 +18,7 @@ public class AuthRepository(AppDbContext db) : IAuthPort
         return BCrypt.Net.BCrypt.Verify(pin, user.PinHash) ? user : null;
     }
 
-    public async Task<User> CreateUserAsync(string name, string initials, UserRole role, string pin)
+    public async Task<User> CreateUserAsync(string name, string initials, UserRole role, string pin, decimal? monthlySalary = null)
     {
         var user = new User
         {
@@ -27,18 +27,20 @@ public class AuthRepository(AppDbContext db) : IAuthPort
             Initials = initials,
             Role = role,
             PinHash = BCrypt.Net.BCrypt.HashPassword(pin, workFactor: 11),
+            MonthlySalary = monthlySalary,
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();
         return user;
     }
 
-    public async Task<User> UpdateUserAsync(string id, string name, string initials, UserRole role, string? pin)
+    public async Task<User> UpdateUserAsync(string id, string name, string initials, UserRole role, string? pin, decimal? monthlySalary = null)
     {
         var user = await db.Users.FirstAsync(u => u.Id == id);
         user.Name = name;
         user.Initials = initials;
         user.Role = role;
+        user.MonthlySalary = monthlySalary;
         if (!string.IsNullOrWhiteSpace(pin))
             user.PinHash = BCrypt.Net.BCrypt.HashPassword(pin, workFactor: 11);
         await db.SaveChangesAsync();

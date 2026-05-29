@@ -31,5 +31,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.PinHash)
             .IsRequired()
             .HasColumnName("pin_hash");
+
+        builder.Property(u => u.MonthlySalary)
+            .HasColumnType("decimal(10,2)");
     }
 }

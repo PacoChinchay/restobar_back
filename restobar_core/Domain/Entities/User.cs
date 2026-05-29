@@ -9,4 +9,5 @@ public class User
     public string Initials { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public string PinHash { get; set; } = string.Empty;
+    public decimal? MonthlySalary { get; set; }
 }

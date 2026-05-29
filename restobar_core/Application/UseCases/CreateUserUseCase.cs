@@ -12,8 +12,8 @@ public class CreateUserUseCase(IAuthPort authPort)
             throw new ArgumentException($"Rol inválido: {request.Role}");
 
         var initials = ToInitials(request.Name);
-        var user = await authPort.CreateUserAsync(request.Name, initials, role, request.Pin);
-        return new UserDto { Id = user.Id, Name = user.Name, Initials = user.Initials, Role = user.Role.ToString() };
+        var user = await authPort.CreateUserAsync(request.Name, initials, role, request.Pin, request.MonthlySalary);
+        return new UserDto { Id = user.Id, Name = user.Name, Initials = user.Initials, Role = user.Role.ToString(), MonthlySalary = user.MonthlySalary };
     }
 
     private static string ToInitials(string name) =>
