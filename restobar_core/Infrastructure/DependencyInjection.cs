@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IMenuRepository, MenuRepository>();
+        services.AddScoped<ICashSessionRepository, CashSessionRepository>();
 
         services.AddScoped<GetProductsUseCase>();
         services.AddScoped<CreateProductUseCase>();
@@ -50,6 +51,9 @@ public static class DependencyInjection
         services.AddScoped<DeactivateMenuUseCase>();
         services.AddScoped<UpdateMenuItemQuantityUseCase>();
         services.AddScoped<GetWaiterReportUseCase>();
+        services.AddScoped<GetCashSessionUseCase>();
+        services.AddScoped<OpenCashSessionUseCase>();
+        services.AddScoped<AddCashMovementUseCase>();
 
         return services;
     }

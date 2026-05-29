@@ -183,6 +183,25 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
         order.Status = "paid";
         order.PaidAt = now;
         order.PaymentMethod = paymentMethod;
+
+        if (method == PaymentMethod.efectivo)
+        {
+            var limaDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now, LimaZone));
+            var session = await db.CashSessions.FirstOrDefaultAsync(s => s.Date == limaDate);
+            if (session is not null)
+            {
+                db.CashMovements.Add(new CashMovement
+                {
+                    CashSessionId = session.Id,
+                    MovementType = "ingreso",
+                    Amount = order.Items.Sum(i => i.Subtotal),
+                    Description = $"Comanda #{orderId}",
+                    CreatedAt = now,
+                    CreatedBy = registeredBy,
+                });
+            }
+        }
+
         await db.SaveChangesAsync();
         return ToDto(order);
     }
