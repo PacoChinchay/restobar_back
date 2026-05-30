@@ -18,4 +18,12 @@ public class ReportsController(GetWaiterReportUseCase waiterReport) : Controller
             TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, LimaZone));
         return Ok(await waiterReport.GetWeekStatsAsync(target));
     }
+
+    [HttpGet("waiters/daily")]
+    public async Task<ActionResult<WaiterDaySummaryDto>> GetWaitersDaily([FromQuery] DateOnly? date)
+    {
+        var target = date ?? DateOnly.FromDateTime(
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, LimaZone));
+        return Ok(await waiterReport.GetDayStatsAsync(target));
+    }
 }

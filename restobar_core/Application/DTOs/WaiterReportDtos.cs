@@ -14,3 +14,5 @@ public record WaiterStatsDto(
 );
 
 public record DailyOrderCountDto(string Date, int OrderCount);
+
+public record WaiterDaySummaryDto(string Date, List<WaiterStatsDto> Waiters);

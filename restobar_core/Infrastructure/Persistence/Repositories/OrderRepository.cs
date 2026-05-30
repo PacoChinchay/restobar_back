@@ -255,4 +255,35 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
 
         return new WaiterWeekSummaryDto(waiters, dailyTotals);
     }
+
+    public async Task<WaiterDaySummaryDto> GetWaiterDayStatsAsync(DateOnly date)
+    {
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(date.ToDateTime(TimeOnly.MinValue), LimaZone);
+        var endUtc   = TimeZoneInfo.ConvertTimeToUtc(date.ToDateTime(new TimeOnly(23, 59, 59)), LimaZone);
+
+        var orders = await db.Orders
+            .Include(o => o.Items)
+            .Where(o => o.CreatedAt >= startUtc && o.CreatedAt <= endUtc && o.CreatedBy != null)
+            .ToListAsync();
+
+        var waiters = orders
+            .GroupBy(o => o.CreatedBy!)
+            .Select(g =>
+            {
+                var paid    = g.Where(o => o.Status == "paid").ToList();
+                var revenue = paid.Sum(o => o.Items.Sum(i => i.Subtotal));
+                var cnt     = g.Count();
+                return new WaiterStatsDto(
+                    g.Key,
+                    cnt,
+                    g.Select(o => o.TableNumber).Distinct().Count(),
+                    revenue,
+                    paid.Count > 0 ? revenue / paid.Count : 0
+                );
+            })
+            .OrderByDescending(w => w.TotalOrders)
+            .ToList();
+
+        return new WaiterDaySummaryDto(date.ToString("yyyy-MM-dd"), waiters);
+    }
 }
