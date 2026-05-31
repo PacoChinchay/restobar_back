@@ -35,20 +35,27 @@ public class SaleRepository(AppDbContext db) : ISaleRepository
 
     public async Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date)
     {
+        var startLima = date.ToDateTime(TimeOnly.MinValue);
+        var startUtc  = TimeZoneInfo.ConvertTimeToUtc(startLima, LimaZone);
+        var endUtc    = startUtc.AddDays(1);
+
         var sales = await GetByDateAsync(date);
 
-        var totalAmount = sales.Sum(s => s.Total);
-        var totalSales = sales.Count;
+        // Payment breakdown comes from OrderPayments (supports mixed payments)
+        var orderPayments = await db.OrderPayments
+            .Where(p => p.RegisteredAt >= startUtc && p.RegisteredAt < endUtc)
+            .ToListAsync();
 
-        var grouped = sales
-            .GroupBy(s => s.PaymentMethod)
-            .ToDictionary(g => g.Key, g => g.Sum(s => s.Total));
+        var grouped = orderPayments
+            .GroupBy(p => p.Method)
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
 
         var byPaymentMethod = new ByPaymentMethodDto
         {
-            Efectivo = grouped.GetValueOrDefault(PaymentMethod.efectivo, 0),
-            Yape = grouped.GetValueOrDefault(PaymentMethod.yape, 0),
-            Plin = grouped.GetValueOrDefault(PaymentMethod.plin, 0)
+            Efectivo      = grouped.GetValueOrDefault(PaymentMethod.efectivo, 0),
+            Yape          = grouped.GetValueOrDefault(PaymentMethod.yape, 0),
+            Plin          = grouped.GetValueOrDefault(PaymentMethod.plin, 0),
+            Transferencia = grouped.GetValueOrDefault(PaymentMethod.transferencia, 0),
         };
 
         var recentSales = sales
@@ -69,10 +76,10 @@ public class SaleRepository(AppDbContext db) : ISaleRepository
 
         return new DailySummaryDto
         {
-            TotalAmount = totalAmount,
-            TotalSales = totalSales,
+            TotalAmount    = sales.Sum(s => s.Total),
+            TotalSales     = sales.Count,
             ByPaymentMethod = byPaymentMethod,
-            RecentSales = recentSales
+            RecentSales    = recentSales
         };
     }
 

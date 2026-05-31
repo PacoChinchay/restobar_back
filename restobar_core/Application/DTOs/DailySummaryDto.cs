@@ -13,4 +13,5 @@ public class ByPaymentMethodDto
     public decimal Efectivo { get; set; }
     public decimal Yape { get; set; }
     public decimal Plin { get; set; }
+    public decimal Transferencia { get; set; }
 }

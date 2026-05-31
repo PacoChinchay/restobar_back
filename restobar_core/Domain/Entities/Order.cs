@@ -10,4 +10,5 @@ public class Order
     public string? PaymentMethod { get; set; }
     public string? CreatedBy { get; set; }
     public List<OrderItem> Items { get; set; } = new();
+    public List<OrderPayment> Payments { get; set; } = new();
 }

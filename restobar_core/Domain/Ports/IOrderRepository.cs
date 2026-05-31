@@ -10,7 +10,7 @@ public interface IOrderRepository
     Task<OrderDto> AddItemAsync(int orderId, OrderItemInput item);
     Task RemoveItemAsync(int orderId, int itemId);
     Task<OrderDto> UpdateItemQuantityAsync(int orderId, int itemId, int quantity);
-    Task<OrderDto> PayAsync(int orderId, string paymentMethod, string registeredBy);
+    Task<OrderDto> PayAsync(int orderId, List<PaymentEntry> payments, string registeredBy);
     Task CancelAsync(int orderId);
     Task<WaiterWeekSummaryDto> GetWaiterWeekStatsAsync(DateOnly endDate);
     Task<WaiterDaySummaryDto> GetWaiterDayStatsAsync(DateOnly date);

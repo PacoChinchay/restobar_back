@@ -11,4 +11,5 @@ public class OrderDto
     public DateTimeOffset? PaidAt { get; set; }
     public string? PaymentMethod { get; set; }
     public string? CreatedBy { get; set; }
+    public List<OrderPaymentDto> Payments { get; set; } = [];
 }

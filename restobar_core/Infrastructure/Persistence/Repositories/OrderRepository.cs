@@ -33,6 +33,7 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
         PaidAt = o.PaidAt.HasValue ? new DateTimeOffset(o.PaidAt.Value, TimeSpan.Zero) : null,
         PaymentMethod = o.PaymentMethod,
         CreatedBy = o.CreatedBy,
+        Payments = o.Payments.Select(p => new OrderPaymentDto(p.Method.ToString(), p.Amount)).ToList(),
     };
 
     public async Task<List<OrderDto>> GetOpenAsync()
@@ -82,6 +83,34 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
 
     public async Task<OrderDto> CreateAsync(int tableNumber, List<OrderItemInput> items, string? createdBy)
     {
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        // Atomic decrement: WHERE remaining >= qty ensures no overselling even under concurrency.
+        // ExecuteUpdateAsync runs a single SQL UPDATE — the WHERE acts as the lock guard.
+        foreach (var item in items)
+        {
+            var rows = await db.MenuItems
+                .Where(mi => mi.Menu.IsActive && mi.ProductId == item.ProductId && mi.RemainingQuantity >= item.Quantity)
+                .ExecuteUpdateAsync(s => s.SetProperty(mi => mi.RemainingQuantity, mi => mi.RemainingQuantity - item.Quantity));
+
+            if (rows == 0)
+            {
+                // Distinguish "not in active menu" (ok) from "insufficient stock" (error)
+                var tracked = await db.MenuItems
+                    .AsNoTracking()
+                    .Include(mi => mi.Menu)
+                    .FirstOrDefaultAsync(mi => mi.Menu.IsActive && mi.ProductId == item.ProductId);
+
+                if (tracked is not null)
+                {
+                    var avail = tracked.RemainingQuantity;
+                    throw new InvalidOperationException(
+                        $"Stock insuficiente para «{item.ProductName}». " +
+                        (avail == 0 ? "Ya no quedan unidades." : $"Solo quedan {avail} unidad{(avail != 1 ? "es" : "")}."));
+                }
+            }
+        }
+
         var order = new Order
         {
             TableNumber = tableNumber,
@@ -98,11 +127,20 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
             }).ToList(),
         };
         db.Orders.Add(order);
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        // Broadcast fresh stock values to all connected clients
         var updates = new List<StockUpdateDto?>();
         foreach (var item in items)
-            updates.Add(await DecrementMenuStock(item.ProductId, item.Quantity));
-        await db.SaveChangesAsync();
+        {
+            var mi = await db.MenuItems.AsNoTracking()
+                .Include(x => x.Menu)
+                .FirstOrDefaultAsync(x => x.Menu.IsActive && x.ProductId == item.ProductId);
+            if (mi is not null) updates.Add(new StockUpdateDto(item.ProductId, mi.RemainingQuantity));
+        }
         await BroadcastStock(updates);
+
         return ToDto(order);
     }
 
@@ -158,13 +196,49 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
         return ToDto(order);
     }
 
-    public async Task<OrderDto> PayAsync(int orderId, string paymentMethod, string registeredBy)
+    public async Task<OrderDto> PayAsync(int orderId, List<PaymentEntry> payments, string registeredBy)
     {
-        var order = await db.Orders.Include(o => o.Items).FirstAsync(o => o.Id == orderId);
-        if (!Enum.TryParse<PaymentMethod>(paymentMethod, ignoreCase: true, out var method))
-            throw new ArgumentException($"Invalid payment method: {paymentMethod}");
+        if (payments.Count == 0)
+            throw new ArgumentException("Se requiere al menos un método de pago.");
+
+        var order = await db.Orders
+            .Include(o => o.Items)
+            .Include(o => o.Payments)
+            .FirstAsync(o => o.Id == orderId);
+
+        var total = order.Items.Sum(i => i.Subtotal);
+        var paid  = payments.Sum(p => p.Amount);
+        if (paid < total - 0.005m)
+            throw new InvalidOperationException($"El monto pagado (S/ {paid:F2}) es menor al total (S/ {total:F2}).");
 
         var now = DateTime.UtcNow;
+
+        // Register each payment entry
+        foreach (var entry in payments)
+        {
+            if (!Enum.TryParse<PaymentMethod>(entry.Method, ignoreCase: true, out var parsedMethod))
+                throw new ArgumentException($"Método de pago inválido: {entry.Method}");
+
+            order.Payments.Add(new OrderPayment
+            {
+                Method = parsedMethod,
+                Amount = entry.Amount,
+                RegisteredAt = now,
+                RegisteredBy = registeredBy,
+            });
+        }
+
+        // Determine display label: single method or "mixto"
+        var distinctMethods = payments.Select(p => p.Method.ToLower()).Distinct().ToList();
+        order.PaymentMethod = distinctMethods.Count == 1 ? distinctMethods[0] : "mixto";
+        order.Status = "paid";
+        order.PaidAt = now;
+
+        // Sales records use the dominant method (highest amount) for product-level tracking
+        Enum.TryParse<PaymentMethod>(
+            payments.MaxBy(p => p.Amount)!.Method,
+            ignoreCase: true, out var dominantMethod);
+
         foreach (var item in order.Items)
         {
             db.Sales.Add(new Sale
@@ -173,18 +247,19 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
                 ProductName = item.ProductName,
                 UnitPrice = item.UnitPrice,
                 Quantity = item.Quantity,
-                PaymentMethod = method,
+                PaymentMethod = dominantMethod,
                 Total = item.Subtotal,
                 RegisteredAt = now,
                 RegisteredBy = registeredBy,
             });
         }
 
-        order.Status = "paid";
-        order.PaidAt = now;
-        order.PaymentMethod = paymentMethod;
+        // CashMovement only for the efectivo portion
+        var cashAmount = payments
+            .Where(p => string.Equals(p.Method, "efectivo", StringComparison.OrdinalIgnoreCase))
+            .Sum(p => p.Amount);
 
-        if (method == PaymentMethod.efectivo)
+        if (cashAmount > 0)
         {
             var limaDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now, LimaZone));
             var session = await db.CashSessions.FirstOrDefaultAsync(s => s.Date == limaDate);
@@ -194,7 +269,7 @@ public class OrderRepository(AppDbContext db, IHubContext<StockHub> hub) : IOrde
                 {
                     CashSessionId = session.Id,
                     MovementType = "ingreso",
-                    Amount = order.Items.Sum(i => i.Subtotal),
+                    Amount = cashAmount,
                     Description = $"Comanda #{orderId}",
                     CreatedAt = now,
                     CreatedBy = registeredBy,

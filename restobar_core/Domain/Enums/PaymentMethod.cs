@@ -4,5 +4,6 @@ public enum PaymentMethod
 {
     efectivo,
     yape,
-    plin
+    plin,
+    transferencia
 }
